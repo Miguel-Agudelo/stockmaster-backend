@@ -1,7 +1,5 @@
 # StockMaster
 
-README - Repositorio de Backend (StockMaster)
-StockMaster - Backend
 Este repositorio contiene el código fuente del backend para StockMaster, un sistema de gestión de inventario desarrollado para optimizar el control de productos en pequeñas y medianas empresas (PYMEs). El proyecto busca solucionar los problemas asociados a la gestión manual de inventarios, como la falta de control en tiempo real y las pérdidas económicas.Este sistema se desarrolla en el marco de la asignatura Proyecto Integrador de la Universidad de Antioquia. 
 
 
