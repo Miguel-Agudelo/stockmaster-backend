@@ -19,6 +19,13 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     public User createUser(UserDto userDto) {
+        // --- Validación de Mínimo de Caracteres (Backend) ---
+        final int MIN_PASSWORD_LENGTH = 6;
+        if (userDto.getPassword() == null || userDto.getPassword().length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos " + MIN_PASSWORD_LENGTH + " caracteres.");
+        }
+        // ---------------------------------------------------
+
         // Se valida contra usuarios activos
         if (userRepository.findByEmailAndIsActive(userDto.getEmail(), true).isPresent()) {
             throw new IllegalArgumentException("El email ya está registrado.");
@@ -50,11 +57,23 @@ public class UserService {
 
         existingUser.setName(userDto.getName());
         existingUser.setEmail(userDto.getEmail());
+
         if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
+            // Se puede añadir una validación aquí también si el usuario cambia la contraseña en modo edición
+            final int MIN_PASSWORD_LENGTH = 6;
+            if (userDto.getPassword().length() < MIN_PASSWORD_LENGTH) {
+                throw new IllegalArgumentException("La contraseña debe tener al menos " + MIN_PASSWORD_LENGTH + " caracteres.");
+            }
             existingUser.setPassword(passwordEncoder.encode(userDto.getPassword()));
         }
+
         existingUser.setRole(userDto.getRole());
         return userRepository.save(existingUser);
+    }
+
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmailAndIsActive(email, true)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
     }
 
     @Transactional

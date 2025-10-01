@@ -1,7 +1,11 @@
 package com.stockmaster.backend.controller;
 
 import com.stockmaster.backend.dto.LoginDto;
+import com.stockmaster.backend.entity.User;
+import com.stockmaster.backend.repository.UserRepository;
 import com.stockmaster.backend.service.AuthService;
+import com.stockmaster.backend.service.UserService;
+import com.stockmaster.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,14 +25,31 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private JwtUtil jwtUtil; // Inyecta JwtUtil para decodificar el token
+
+    @Autowired
+    private UserService userService;
+
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginDto loginDto) {
         try {
-            String token = authService.authenticate(loginDto);
+            String token = authService.authenticate(loginDto); // Obtiene el token
 
-            Map<String, String> response = new HashMap<>();
+            User user = userService.getUserByEmail(loginDto.getEmail());
+            if (user == null) {
+                throw new BadCredentialsException("Usuario no encontrado o inactivo.");
+            }
+            // Decodifica los claims del token
+            Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("message", "Login exitoso");
+
+            // Extrae id_user y role desde los claims del token
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("id_user", jwtUtil.getClaims(token).get("id_user", Long.class));
+            userData.put("role", jwtUtil.getClaims(token).get("role", String.class));
+            response.put("user", userData);
 
             return ResponseEntity.ok(response);
 
