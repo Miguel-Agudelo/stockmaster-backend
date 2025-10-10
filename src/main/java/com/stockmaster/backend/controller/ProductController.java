@@ -5,14 +5,12 @@ import com.stockmaster.backend.dto.ProductListDto;
 import com.stockmaster.backend.entity.Product;
 import com.stockmaster.backend.service.ProductService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +34,7 @@ public class ProductController {
         }
     }
 
-    // Nuevo endpoint para la HU05
+    //endpoint para la HU05
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<List<ProductListDto>> getAllProducts() {
@@ -44,7 +42,7 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    // Nuevo endpoint para la HU06
+    //endpoint para la HU06
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody ProductDto productDto) {
@@ -57,7 +55,6 @@ public class ProductController {
             responseDto.setDescription(updatedProduct.getDescription());
             responseDto.setPrice(updatedProduct.getPrice());
             responseDto.setCategoryName(updatedProduct.getCategory() != null ? updatedProduct.getCategory().getName() : null);
-            System.out.println("Después de @PreAuthorize - Producto actualizado: " + updatedProduct);
             return ResponseEntity.ok(responseDto);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());

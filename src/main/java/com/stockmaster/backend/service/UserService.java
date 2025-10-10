@@ -19,12 +19,11 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     public User createUser(UserDto userDto) {
-        // --- Validación de Mínimo de Caracteres (Backend) ---
+        // Validación de contraseña mínima
         final int MIN_PASSWORD_LENGTH = 6;
         if (userDto.getPassword() == null || userDto.getPassword().length() < MIN_PASSWORD_LENGTH) {
             throw new IllegalArgumentException("La contraseña debe tener al menos " + MIN_PASSWORD_LENGTH + " caracteres.");
         }
-        // ---------------------------------------------------
 
         // Se valida contra usuarios activos
         if (userRepository.findByEmailAndIsActive(userDto.getEmail(), true).isPresent()) {

@@ -21,4 +21,10 @@ public class Warehouse {
 
     @Column(name = "ciudad")
     private String city;
+
+    @Column(name = "descripcion")
+    private String description;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive = true;
 }

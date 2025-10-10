@@ -32,10 +32,8 @@ public class User {
     @Column(name = "fecha_registro", nullable = false, updatable = false) // 'updatable = false' previene cambios posteriores
     private LocalDateTime createdAt;
 
-    // 💡 ANOTACIÓN: Para actualizar la fecha automáticamente
     @PrePersist
     protected void onCreate() {
-        // Establece la fecha y hora actual antes de que la entidad se guarde (persista) por primera vez.
         this.createdAt = LocalDateTime.now();
     }
 }
