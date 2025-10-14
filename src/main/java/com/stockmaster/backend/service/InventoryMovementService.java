@@ -6,6 +6,8 @@ import com.stockmaster.backend.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.List; // 🚨 ¡IMPORT NECESARIO!
+import java.util.stream.Collectors; // 🚨 ¡IMPORT NECESARIO!
 
 @Service
 public class InventoryMovementService {
@@ -20,6 +22,18 @@ public class InventoryMovementService {
     private UserRepository userRepository;
     @Autowired
     private InventoryMovementRepository movementRepository;
+
+    // 🎯 NUEVO MÉTODO: OBTENER HISTORIAL DE MOVIMIENTOS
+    // =========================================================
+    public List<MovementDto> getAllMovements() {
+        // 1. Obtener todas las entidades del repositorio
+        List<InventoryMovement> movements = movementRepository.findAll();
+
+        // 2. Mapear cada entidad a un MovementDto
+        return movements.stream()
+                .map(this::convertToDto) // Usa el nuevo método de mapeo
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public InventoryMovement registerEntry(MovementDto dto) {
@@ -82,7 +96,48 @@ public class InventoryMovementService {
         movement.setQuantity(dto.getQuantity());
         movement.setMovementType(type);
         movement.setUser(user);
+        movement.setMotive(dto.getMotive());
 
         return movementRepository.save(movement);
+    }
+
+    private MovementDto convertToDto(InventoryMovement movement) {
+        MovementDto dto = new MovementDto();
+
+        dto.setId(movement.getId());
+        // Mapea los campos de trazabilidad necesarios para el frontend
+        // Nota: Asegúrate de que tu MovementDto contenga todos estos campos.
+        dto.setProductId(movement.getProduct().getId());
+        dto.setProductName(movement.getProduct().getName());
+        dto.setWarehouseId(movement.getWarehouse().getId());
+        dto.setWarehouseName(movement.getWarehouse().getName());
+        dto.setQuantity(movement.getQuantity());
+        dto.setMotive(movement.getMotive()); // Asume que tienes un campo 'motive' en InventoryMovement
+        dto.setMovementType(movement.getMovementType()); // ENTRADA o SALIDA
+        dto.setUserId(movement.getUser().getId());
+        dto.setUserName(movement.getUser().getName()); // Asume que User tiene un campo 'name' o 'email'
+        dto.setMovementDate(movement.getMovementDate()); // Asume que tienes un campo de fecha
+
+        // Puedes agregar más campos de mapeo si son necesarios para la tabla (ej. fecha, motivo, etc.)
+
+        // Producto
+        if (movement.getProduct() != null) {
+            dto.setProductId(movement.getProduct().getId());
+            dto.setProductName(movement.getProduct().getName()); // 🟢 ESTO ES LO CRUCIAL
+        }
+
+        // Almacén/Bodega
+        if (movement.getWarehouse() != null) {
+            dto.setWarehouseId(movement.getWarehouse().getId());
+            dto.setWarehouseName(movement.getWarehouse().getName()); // 🟢 ESTO ES LO CRUCIAL
+        }
+
+        // Usuario
+        if (movement.getUser() != null) {
+            dto.setUserId(movement.getUser().getId());
+            // Asumiendo que tu entidad User tiene un método getName() o getEmail()
+            dto.setUserName(movement.getUser().getName()); // 🟢 ESTO ES LO CRUCIAL
+        }
+        return dto;
     }
 }

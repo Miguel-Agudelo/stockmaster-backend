@@ -27,6 +27,9 @@ public class InventoryMovement {
     @Column(name = "cantidad", nullable = false)
     private int quantity;
 
+    @Column(name = "motivo", length = 500)
+    private String motive;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_producto", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

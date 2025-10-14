@@ -5,13 +5,20 @@ import com.stockmaster.backend.entity.User;
 import com.stockmaster.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService; // 💡 Implementación de la interfaz
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService { // 🟢 Implementación
 
     @Autowired
     private UserRepository userRepository;
@@ -73,6 +80,28 @@ public class UserService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmailAndIsActive(email, true)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
+    }
+
+    /**
+     * 🟢 Implementación del método UserDetailsService.
+     * Es requerido por Spring Security para cargar los detalles del usuario
+     * basándose en el nombre de usuario (email en este caso).
+     */
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        // 1. Busca el usuario en la DB
+        User user = getUserByEmail(email);
+
+        // 2. Define las autoridades/roles (usando el prefijo ROLE_ para Spring Security)
+        Collection<? extends GrantedAuthority> authorities =
+                Collections.singleton(new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase()));
+
+        // 3. Retorna un objeto UserDetails de Spring Security
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(),
+                user.getPassword(), // La contraseña ya viene encriptada de la DB
+                authorities
+        );
     }
 
     @Transactional

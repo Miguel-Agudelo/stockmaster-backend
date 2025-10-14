@@ -3,6 +3,7 @@ package com.stockmaster.backend.service;
 import com.stockmaster.backend.dto.ProductStockDto;
 import com.stockmaster.backend.dto.WarehouseDto;
 import com.stockmaster.backend.dto.WarehouseListDto;
+import com.stockmaster.backend.dto.WarehouseSelectionDto;
 import com.stockmaster.backend.entity.Warehouse;
 import com.stockmaster.backend.repository.InventoryRepository;
 import com.stockmaster.backend.repository.WarehouseRepository;
@@ -36,7 +37,7 @@ public class WarehouseService {
         warehouse.setAddress(dto.getAddress());
         warehouse.setCity(dto.getCity());
         warehouse.setDescription(dto.getDescription());
-        warehouse.setActive(true);
+        warehouse.setActive(true); // ✅ CORREGIDO: Usando setActive()
         return warehouseRepository.save(warehouse);
     }
 
@@ -44,7 +45,7 @@ public class WarehouseService {
     @Transactional
     public Warehouse updateWarehouse(Long id, WarehouseDto dto) {
         Warehouse warehouse = warehouseRepository.findById(id)
-                .filter(Warehouse::isActive)
+                .filter(Warehouse::isActive) // ✅ CORREGIDO: Usando isActive() (o getIsActive() si lo tiene)
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado."));
 
         // Criterio de Aceptación: Puede modificar el nombre y la ubicación
@@ -59,19 +60,21 @@ public class WarehouseService {
     @Transactional
     public void deleteWarehouse(Long id) {
         Warehouse warehouse = warehouseRepository.findById(id)
-                .filter(Warehouse::isActive)
+                .filter(Warehouse::isActive) // ✅ CORREGIDO: Usando isActive() (o getIsActive() si lo tiene)
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado."));
+
         // Criterio de Aceptación: Si un almacén tiene stock, no se permite la eliminación.
         long stockCount = inventoryRepository.countByWarehouseAndCurrentStockGreaterThan(warehouse, 0);
         if (stockCount > 0) {
             throw new IllegalStateException("El almacén tiene productos asignados y no puede ser eliminado. Productos con stock activo: " + stockCount);
         }
-        warehouse.setActive(false);
+        warehouse.setActive(false); // ✅ CORREGIDO: Usando setActive()
         warehouseRepository.save(warehouse);
     }
 
-    // HU10 - Visualización de almacenes
+    // HU10 - Visualización de almacenes (Lista completa con stock total)
     public List<WarehouseListDto> getAllWarehouses() {
+        // Asumo que tu consulta JPQL en WarehouseRepository usa 'w.isActive' o 'w.active'
         List<Object[]> results = warehouseRepository.findAllActiveWarehousesWithTotalStock();
 
         return results.stream()
@@ -86,20 +89,34 @@ public class WarehouseService {
                     dto.setTotalStock(totalStockLong != null ? totalStockLong.intValue() : 0);
 
                     // Obtener productos y stock específicos del almacén
-                    List<ProductStockDto> products = inventoryRepository.findByWarehouseAndCurrentStockGreaterThan(warehouseRepository.findById(dto.getId()).get(), 0)
+                    // Esto asume que el método findById() retorna un Optional<Warehouse>
+                    Warehouse warehouse = warehouseRepository.findById(dto.getId()).orElse(null);
+
+                    List<ProductStockDto> products = (warehouse != null)
+                            ? inventoryRepository.findByWarehouseAndCurrentStockGreaterThan(warehouse, 0)
                             .stream()
                             .map(inventory -> {
                                 ProductStockDto prodDto = new ProductStockDto();
                                 prodDto.setProductId(inventory.getProduct().getId());
                                 prodDto.setProductName(inventory.getProduct().getName());
                                 prodDto.setCurrentStock(inventory.getCurrentStock());
+                                prodDto.setMinStock(inventory.getMinStock());
                                 return prodDto;
                             })
-                            .collect(Collectors.toList());
+                            .collect(Collectors.toList())
+                            : List.of(); // Lista vacía si no se encuentra el almacén
 
                     dto.setProducts(products);
                     return dto;
                 })
+                .collect(Collectors.toList());
+    }
+
+    // Método para obtener almacenes activos para selección (lista simple)
+    public List<WarehouseSelectionDto> getActiveWarehousesForSelection() {
+        return warehouseRepository.findActiveWarehousesForSelection()
+                .stream()
+                .map(wh -> new WarehouseSelectionDto(wh.getId(), wh.getName()))
                 .collect(Collectors.toList());
     }
 }

@@ -4,6 +4,7 @@ import com.stockmaster.backend.dto.WarehouseDto;
 import com.stockmaster.backend.dto.WarehouseListDto;
 import com.stockmaster.backend.entity.Warehouse;
 import com.stockmaster.backend.service.WarehouseService;
+import com.stockmaster.backend.dto.WarehouseSelectionDto;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,12 @@ public class WarehouseController {
     @Autowired
     private WarehouseService warehouseService;
 
+    @GetMapping("/active-list") // 💡 ESTA ES LA RUTA QUE FALTABA
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')") // 💡 PERMISOS PARA EVITAR EL 403
+    public ResponseEntity<List<WarehouseSelectionDto>> getActiveWarehousesList() {
+        List<WarehouseSelectionDto> warehouses = warehouseService.getActiveWarehousesForSelection();
+        return ResponseEntity.ok(warehouses);
+    }
     // HU12 - Registro de almacenes (Solo Administrador)
     @PostMapping
     @PreAuthorize("hasRole('ADMINISTRADOR')")

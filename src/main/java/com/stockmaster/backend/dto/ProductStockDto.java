@@ -8,4 +8,5 @@ public class ProductStockDto {
     private Long productId;
     private String productName;
     private int currentStock;
+    private int minStock;
 }
