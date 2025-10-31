@@ -134,6 +134,39 @@ public class ProductService {
         productRepository.save(productToDelete);
     }
 
+    // HU17 . Listar productos inactivos
+    public List<ProductListDto> getAllInactiveProducts() {
+        List<Object[]> results = productRepository.findAllInactiveProductsWithTotalStock();
+
+        return results.stream()
+                .map(result -> {
+                    ProductListDto dto = new ProductListDto();
+                    dto.setId((Long) result[0]);
+                    dto.setName((String) result[1]);
+                    dto.setDescription((String) result[2]);
+                    dto.setPrice((Double) result[3]);
+                    dto.setSku((String) result[4]);
+                    dto.setCategoryName((String) result[5]);
+                    Long totalStockLong = (Long) result[6];
+                    dto.setTotalStock(totalStockLong != null ? totalStockLong.intValue() : 0);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // HU17. Restaurar Producto
+    @Transactional
+    public void restoreProduct(Long id) {
+        Product productToRestore = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
+        if (productToRestore.isActive()) {
+            throw new IllegalArgumentException("El producto ya se encuentra activo.");
+        }
+        productToRestore.setActive(true);
+        productRepository.save(productToRestore);
+
+    }
+
     private String generateSku(String productName) {
         // Lógica simple para generar un SKU. Se puede ajustar para otra convención.
         return productName.toUpperCase().replace(" ", "-") + "-" + System.currentTimeMillis();

@@ -76,4 +76,27 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         }
     }
+
+    // HU19. Visualizar usuarios inactivos
+    @GetMapping("/inactive")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<List<User>> getAllInactiveUsers() {
+        return ResponseEntity.ok(userService.getAllInactiveUsers());
+    }
+
+    // HU19. Restaurar Usuario
+    @PutMapping("/{id}/restore")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<?> restoreUser(@PathVariable Long id) {
+        try {
+            userService.restoreUser(id);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Usuario restaurado exitosamente. Puede volver a iniciar sesión con sus credenciales.");
+            return ResponseEntity.ok().body(response);
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

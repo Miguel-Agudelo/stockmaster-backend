@@ -74,4 +74,26 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
+
+    // HU17. Visualizar productos inactivos
+    @GetMapping("/inactive")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<List<ProductListDto>> getAllInactiveProducts() {
+        List<ProductListDto> products = productService.getAllInactiveProducts();
+        return ResponseEntity.ok(products);
+    }
+
+    // HU17. Restaurar Producto
+    @PutMapping("/{id}/restore")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<?> restoreProduct(@PathVariable Long id) {
+        try {
+            productService.restoreProduct(id);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Producto restaurado exitosamente y disponible en el inventario activo.");
+            return ResponseEntity.ok().body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
 }

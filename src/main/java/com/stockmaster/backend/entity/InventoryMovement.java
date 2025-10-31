@@ -20,9 +20,11 @@ public class InventoryMovement {
     @Column(name = "fecha_movimiento", nullable = false)
     private LocalDateTime movementDate = LocalDateTime.now();
 
-    // Tipo de movimiento: "ENTRADA" o "SALIDA"
     @Column(name = "tipo_movimiento", nullable = false)
     private String movementType;
+
+    @Column(name = "referencia_transferencia")
+    private String transferReference;
 
     @Column(name = "cantidad", nullable = false)
     private int quantity;
