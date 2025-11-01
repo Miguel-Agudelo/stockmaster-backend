@@ -119,4 +119,38 @@ public class WarehouseService {
                 .map(wh -> new WarehouseSelectionDto(wh.getId(), wh.getName()))
                 .collect(Collectors.toList());
     }
+
+    // HU18 Listar almacenes inactivos
+    public List<WarehouseListDto> getAllInactiveWarehouses() {
+        List<Object[]> results = warehouseRepository.findAllInactiveWarehousesWithTotalStock();
+
+        return results.stream()
+                .map(result -> {
+                    WarehouseListDto dto = new WarehouseListDto();
+                    dto.setId((Long) result[0]);
+                    dto.setName((String) result[1]);
+                    dto.setAddress((String) result[2]);
+                    dto.setCity((String) result[3]);
+                    dto.setDescription((String) result[4]);
+
+                    Long totalStockLong = (Long) result[5];
+                    dto.setTotalStock(totalStockLong != null ? totalStockLong.intValue() : 0);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // HU18. Restaurar Almacén
+    @Transactional
+    public void restoreWarehouse(Long id) {
+        Warehouse warehouseToRestore = warehouseRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado."));
+
+        if (warehouseToRestore.isActive()) {
+            throw new IllegalArgumentException("El almacén ya se encuentra activo.");
+        }
+
+        warehouseToRestore.setActive(true);
+        warehouseRepository.save(warehouseToRestore);
+    }
 }

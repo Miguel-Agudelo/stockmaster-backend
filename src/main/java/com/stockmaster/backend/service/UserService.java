@@ -120,4 +120,23 @@ public class UserService implements UserDetailsService { // 🟢 Implementación
         userToDelete.setActive(false);
         userRepository.save(userToDelete);
     }
+
+    // HU19. Listar usuarios inactivos
+    public List<User> getAllInactiveUsers() {
+        return userRepository.findAllByIsActive(false);
+    }
+
+    // HU19 - 2. Restaurar Usuario
+    @Transactional
+    public void restoreUser(Long id) {
+        User userToRestore = userRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con ID: " + id));
+
+        if (userToRestore.isActive()) {
+            throw new IllegalStateException("El usuario ya se encuentra activo.");
+        }
+
+        userToRestore.setActive(true);
+        userRepository.save(userToRestore);
+    }
 }

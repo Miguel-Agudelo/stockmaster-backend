@@ -87,4 +87,28 @@ public class WarehouseController {
         List<WarehouseListDto> warehouses = warehouseService.getAllWarehouses();
         return ResponseEntity.ok(warehouses);
     }
+
+    // HU18. Visualizar almacenes inactivos (Solo Administrador)
+    @GetMapping("/inactive")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<List<WarehouseListDto>> getAllInactiveWarehouses() {
+        List<WarehouseListDto> warehouses = warehouseService.getAllInactiveWarehouses();
+        return ResponseEntity.ok(warehouses);
+    }
+
+    // HU18. Restaurar Almacén
+    @PutMapping("/{id}/restore")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<?> restoreWarehouse(@PathVariable Long id) {
+        try {
+            warehouseService.restoreWarehouse(id);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Almacén restaurado exitosamente y disponible para uso.");
+            return ResponseEntity.ok().body(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
+    }
 }
