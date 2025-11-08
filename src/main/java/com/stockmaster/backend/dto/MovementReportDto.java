@@ -10,5 +10,6 @@ public class MovementReportDto {
     private String movementType;
     private int quantity;
     private String warehouseName;
+    private String userName;
     //private String transferReference;
 }

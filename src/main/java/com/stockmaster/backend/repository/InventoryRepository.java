@@ -5,6 +5,8 @@ import com.stockmaster.backend.entity.Product;
 import com.stockmaster.backend.entity.Warehouse;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.jpa.repository.Query;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -13,4 +15,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     long countByWarehouse(Warehouse warehouse);
     List<Inventory> findByWarehouseAndCurrentStockGreaterThan(Warehouse warehouse, int currentStock);
     long countByWarehouseAndCurrentStockGreaterThan(Warehouse warehouse, int currentStock);
+
+    @Query("SELECT i FROM Inventory i WHERE i.currentStock < i.minStock")
+    List<Inventory> findItemsWithLowStock();
 }

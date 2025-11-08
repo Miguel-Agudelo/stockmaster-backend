@@ -17,12 +17,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "GROUP BY p.id, p.name, p.description, p.price, p.sku, c.name")
     List<Object[]> findAllProductsWithTotalStock();
 
-    @Query("SELECT p.id, p.name, p.description, p.price, p.sku, c.name, SUM(i.currentStock) " +
+    @Query("SELECT p.id, p.name, p.description, p.price, p.sku, c.name, SUM(i.currentStock), p.deletedAt " + // <-- 8vo campo añadido
             "FROM Product p " +
             "LEFT JOIN p.category c " +
             "LEFT JOIN Inventory i ON i.product.id = p.id " +
-            "WHERE p.isActive = false " + // <-- Filtro de inactivos
-            "GROUP BY p.id, c.name")
+            "WHERE p.isActive = false " + // Filtro de inactivos
+            "GROUP BY p.id, p.name, p.description, p.price, p.sku, c.name, p.deletedAt") // <-- Añadido al GROUP BY
     List<Object[]> findAllInactiveProductsWithTotalStock();
 
     /** HU14: Reporte de stock bajo. Encuentra productos activos

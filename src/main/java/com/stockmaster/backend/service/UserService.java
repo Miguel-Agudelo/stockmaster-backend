@@ -1,6 +1,7 @@
 package com.stockmaster.backend.service;
 
 import com.stockmaster.backend.dto.UserDto;
+import com.stockmaster.backend.dto.UserListDto;
 import com.stockmaster.backend.entity.User;
 import com.stockmaster.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -8,17 +9,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService; // 💡 Implementación de la interfaz
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime; // Importación necesaria para LocalDateTime
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 @Service
-public class UserService implements UserDetailsService { // 🟢 Implementación
+public class UserService implements UserDetailsService {
 
     @Autowired
     private UserRepository userRepository;
@@ -65,7 +67,6 @@ public class UserService implements UserDetailsService { // 🟢 Implementación
         existingUser.setEmail(userDto.getEmail());
 
         if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
-            // Se puede añadir una validación aquí también si el usuario cambia la contraseña en modo edición
             final int MIN_PASSWORD_LENGTH = 6;
             if (userDto.getPassword().length() < MIN_PASSWORD_LENGTH) {
                 throw new IllegalArgumentException("La contraseña debe tener al menos " + MIN_PASSWORD_LENGTH + " caracteres.");
@@ -82,24 +83,16 @@ public class UserService implements UserDetailsService { // 🟢 Implementación
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
     }
 
-    /**
-     * 🟢 Implementación del método UserDetailsService.
-     * Es requerido por Spring Security para cargar los detalles del usuario
-     * basándose en el nombre de usuario (email en este caso).
-     */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // 1. Busca el usuario en la DB
         User user = getUserByEmail(email);
 
-        // 2. Define las autoridades/roles (usando el prefijo ROLE_ para Spring Security)
         Collection<? extends GrantedAuthority> authorities =
                 Collections.singleton(new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase()));
 
-        // 3. Retorna un objeto UserDetails de Spring Security
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                user.getPassword(), // La contraseña ya viene encriptada de la DB
+                user.getPassword(),
                 authorities
         );
     }
@@ -109,21 +102,45 @@ public class UserService implements UserDetailsService { // 🟢 Implementación
         User userToDelete = userRepository.findById(id)
                 .filter(User::isActive)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con ID: " + id));
-        // Se valida contra usuarios activos
+
+        // Validación de Administrador Único
         if ("ADMINISTRADOR".equals(userToDelete.getRole())) {
             long adminCount = userRepository.countByRoleAndIsActive("ADMINISTRADOR", true);
             if (adminCount == 1) {
                 throw new IllegalStateException("No se puede eliminar al único Administrador del sistema.");
             }
         }
-        // Borrado lógico: se marca como inactivo
+
+        // 🟢 CORRECCIÓN CLAVE: Asignar la fecha de eliminación
+        userToDelete.setDeletedAt(LocalDateTime.now());
+
+        // Borrado lógico
         userToDelete.setActive(false);
         userRepository.save(userToDelete);
     }
 
-    // HU19. Listar usuarios inactivos
-    public List<User> getAllInactiveUsers() {
-        return userRepository.findAllByIsActive(false);
+    // HU19. Listar usuarios inactivos y mapear a DTO
+    public List<UserListDto> getAllInactiveUserDtos() {
+
+        // 1. Obtener las entidades inactivas
+        List<User> inactiveUsers = userRepository.findAllByIsActive(false);
+
+        // 2. Mapear cada entidad a su DTO
+        return inactiveUsers.stream()
+                .map(user -> {
+                    UserListDto dto = new UserListDto();
+                    dto.setId(user.getId());
+                    dto.setName(user.getName());
+                    dto.setEmail(user.getEmail());
+                    dto.setRole(user.getRole());
+                    dto.setCreatedAt(user.getCreatedAt());
+
+                    // 🟢 MAPEO DE DELETEDAT
+                    dto.setDeletedAt(user.getDeletedAt());
+
+                    return dto;
+                })
+                .toList();
     }
 
     // HU19 - 2. Restaurar Usuario
@@ -135,6 +152,9 @@ public class UserService implements UserDetailsService { // 🟢 Implementación
         if (userToRestore.isActive()) {
             throw new IllegalStateException("El usuario ya se encuentra activo.");
         }
+
+        // 🟢 CORRECCIÓN CLAVE: Limpiar la fecha de eliminación
+        userToRestore.setDeletedAt(null);
 
         userToRestore.setActive(true);
         userRepository.save(userToRestore);

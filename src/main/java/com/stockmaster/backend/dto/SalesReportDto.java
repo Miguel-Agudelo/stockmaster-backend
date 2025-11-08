@@ -8,4 +8,5 @@ public class SalesReportDto {
     private String productName;
     private Long unitsSold; // Cantidad total vendida (SALIDAS)
     private Double totalRevenue; // Ingresos generados (Precio * Cantidad)
+    private Double averagePrice;
 }

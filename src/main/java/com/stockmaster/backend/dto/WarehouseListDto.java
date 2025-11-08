@@ -1,6 +1,7 @@
 package com.stockmaster.backend.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -13,4 +14,5 @@ public class WarehouseListDto {
     private String description;
     private int totalStock;
     private List<ProductStockDto> products;
+    private LocalDateTime deletedAt;
 }

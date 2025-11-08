@@ -4,13 +4,11 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class ProductListDto {
+public class UserListDto {
     private Long id;
     private String name;
-    private String description;
-    private double price;
-    private String categoryName;
-    private int totalStock;
-    private String sku;
+    private String email;
+    private String role;
+    private LocalDateTime createdAt;
     private LocalDateTime deletedAt;
 }

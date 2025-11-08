@@ -6,6 +6,7 @@ import lombok.Data;
 public class StockReportDto {
     private Long productId;
     private String productName;
-    private int totalStockActual;
-    private int minStockThreshold;
+    private String warehouseName;
+    private int currentStock;
+    private int minimumStock;
 }

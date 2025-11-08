@@ -14,8 +14,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.format.annotation.DateTimeFormat;
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -35,8 +38,8 @@ public class ReportController {
     // HU15 - Reporte de movimientos de inventario por fecha
     @GetMapping("/movements")
     public ResponseEntity<List<MovementReportDto>> getMovementReport(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         if (startDate.isAfter(endDate)) {
             return ResponseEntity.badRequest().build();

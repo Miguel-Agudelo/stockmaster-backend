@@ -1,5 +1,4 @@
 package com.stockmaster.backend.entity;
-
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -29,8 +28,11 @@ public class User {
     @Column(name = "rol", nullable = false)
     private String role;
 
-    @Column(name = "fecha_registro", nullable = false, updatable = false) // 'updatable = false' previene cambios posteriores
+    @Column(name = "fecha_registro", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "fecha_eliminacion")
+    private LocalDateTime deletedAt;
 
     @PrePersist
     protected void onCreate() {

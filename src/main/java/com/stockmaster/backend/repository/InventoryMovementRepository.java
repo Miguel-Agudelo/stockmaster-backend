@@ -17,10 +17,12 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
     /** HU16: Reporte de productos más vendidos. Suma la cantidad total de SALIDAS.
      * Calcula ingresos usando el precio actual del producto.
      */
-    @Query("SELECT p.id, p.name, SUM(m.quantity), p.price * SUM(m.quantity) " +
+    @Query("SELECT p.id, p.name, SUM(m.quantity), SUM(m.quantity * p.price), " +
+
+            "SUM(m.quantity * p.price) / SUM(m.quantity) " +
             "FROM InventoryMovement m JOIN m.product p " +
             "WHERE m.movementType = 'SALIDA' " +
             "GROUP BY p.id, p.name, p.price " +
             "ORDER BY SUM(m.quantity) DESC")
-    List<Object[]> findMostSoldProductsWithRevenue();
+    List<Object[]> findMostSoldProductsWithRevenueAndAveragePrice();
 }

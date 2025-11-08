@@ -2,6 +2,7 @@ package com.stockmaster.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -27,4 +28,7 @@ public class Warehouse {
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
+
+    @Column(name = "fecha_eliminacion")
+    private LocalDateTime deletedAt;
 }

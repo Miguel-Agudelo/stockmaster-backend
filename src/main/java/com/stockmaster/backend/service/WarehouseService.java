@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime; // 🟢 Importación necesaria para LocalDateTime
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,7 +38,7 @@ public class WarehouseService {
         warehouse.setAddress(dto.getAddress());
         warehouse.setCity(dto.getCity());
         warehouse.setDescription(dto.getDescription());
-        warehouse.setActive(true); // ✅ CORREGIDO: Usando setActive()
+        warehouse.setActive(true);
         return warehouseRepository.save(warehouse);
     }
 
@@ -45,7 +46,7 @@ public class WarehouseService {
     @Transactional
     public Warehouse updateWarehouse(Long id, WarehouseDto dto) {
         Warehouse warehouse = warehouseRepository.findById(id)
-                .filter(Warehouse::isActive) // ✅ CORREGIDO: Usando isActive() (o getIsActive() si lo tiene)
+                .filter(Warehouse::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado."));
 
         // Criterio de Aceptación: Puede modificar el nombre y la ubicación
@@ -60,7 +61,7 @@ public class WarehouseService {
     @Transactional
     public void deleteWarehouse(Long id) {
         Warehouse warehouse = warehouseRepository.findById(id)
-                .filter(Warehouse::isActive) // ✅ CORREGIDO: Usando isActive() (o getIsActive() si lo tiene)
+                .filter(Warehouse::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado."));
 
         // Criterio de Aceptación: Si un almacén tiene stock, no se permite la eliminación.
@@ -68,13 +69,16 @@ public class WarehouseService {
         if (stockCount > 0) {
             throw new IllegalStateException("El almacén tiene productos asignados y no puede ser eliminado. Productos con stock activo: " + stockCount);
         }
-        warehouse.setActive(false); // ✅ CORREGIDO: Usando setActive()
+
+        // 🟢 CORRECCIÓN CLAVE: Asignar la fecha de eliminación
+        warehouse.setDeletedAt(LocalDateTime.now());
+
+        warehouse.setActive(false);
         warehouseRepository.save(warehouse);
     }
 
     // HU10 - Visualización de almacenes (Lista completa con stock total)
     public List<WarehouseListDto> getAllWarehouses() {
-        // Asumo que tu consulta JPQL en WarehouseRepository usa 'w.isActive' o 'w.active'
         List<Object[]> results = warehouseRepository.findAllActiveWarehousesWithTotalStock();
 
         return results.stream()
@@ -89,7 +93,6 @@ public class WarehouseService {
                     dto.setTotalStock(totalStockLong != null ? totalStockLong.intValue() : 0);
 
                     // Obtener productos y stock específicos del almacén
-                    // Esto asume que el método findById() retorna un Optional<Warehouse>
                     Warehouse warehouse = warehouseRepository.findById(dto.getId()).orElse(null);
 
                     List<ProductStockDto> products = (warehouse != null)
@@ -104,7 +107,7 @@ public class WarehouseService {
                                 return prodDto;
                             })
                             .collect(Collectors.toList())
-                            : List.of(); // Lista vacía si no se encuentra el almacén
+                            : List.of();
 
                     dto.setProducts(products);
                     return dto;
@@ -135,6 +138,12 @@ public class WarehouseService {
 
                     Long totalStockLong = (Long) result[5];
                     dto.setTotalStock(totalStockLong != null ? totalStockLong.intValue() : 0);
+
+                    // 🟢 CORRECCIÓN: Mapear la fecha de eliminación (índice 6)
+                    if (result.length > 6) {
+                        dto.setDeletedAt((LocalDateTime) result[6]);
+                    }
+
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -149,6 +158,9 @@ public class WarehouseService {
         if (warehouseToRestore.isActive()) {
             throw new IllegalArgumentException("El almacén ya se encuentra activo.");
         }
+
+        // 🟢 CORRECCIÓN CLAVE: Limpiar la fecha de eliminación
+        warehouseToRestore.setDeletedAt(null);
 
         warehouseToRestore.setActive(true);
         warehouseRepository.save(warehouseToRestore);

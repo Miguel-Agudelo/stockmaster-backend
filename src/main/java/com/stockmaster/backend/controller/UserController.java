@@ -1,6 +1,7 @@
 package com.stockmaster.backend.controller;
 
 import com.stockmaster.backend.dto.UserDto;
+import com.stockmaster.backend.dto.UserListDto;
 import com.stockmaster.backend.entity.User;
 import com.stockmaster.backend.service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -80,8 +81,8 @@ public class UserController {
     // HU19. Visualizar usuarios inactivos
     @GetMapping("/inactive")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<List<User>> getAllInactiveUsers() {
-        return ResponseEntity.ok(userService.getAllInactiveUsers());
+    public ResponseEntity<List<UserListDto>> getAllInactiveUsers() {
+        return ResponseEntity.ok(userService.getAllInactiveUserDtos());
     }
 
     // HU19. Restaurar Usuario

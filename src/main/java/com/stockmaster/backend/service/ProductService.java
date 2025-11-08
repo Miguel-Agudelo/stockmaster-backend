@@ -14,6 +14,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime; // Importación añadida
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -129,6 +130,9 @@ public class ProductService {
         Product productToDelete = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
+        // Establecer la fecha de eliminación
+        productToDelete.setDeletedAt(LocalDateTime.now());
+
         // Se establece el estado a inactivo en lugar de eliminar el registro
         productToDelete.setActive(false);
         productRepository.save(productToDelete);
@@ -147,13 +151,17 @@ public class ProductService {
         if (productToRestore.isActive()) {
             throw new IllegalArgumentException("El producto ya se encuentra activo.");
         }
+
+        // Limpiar la fecha de eliminación al restaurar
+        productToRestore.setDeletedAt(null);
+
         productToRestore.setActive(true);
         productRepository.save(productToRestore);
-
     }
 
     // HU17 . Listar productos inactivos
     public List<ProductListDto> getAllInactiveProducts() {
+        // ASUNCIÓN: productRepository.findAllInactiveProductsWithTotalStock() debe devolver el campo deletedAt en la posición 7
         List<Object[]> results = productRepository.findAllInactiveProductsWithTotalStock();
 
         return results.stream()
@@ -165,8 +173,15 @@ public class ProductService {
                     dto.setPrice((Double) result[3]);
                     dto.setSku((String) result[4]);
                     dto.setCategoryName((String) result[5]);
+
                     Long totalStockLong = (Long) result[6];
                     dto.setTotalStock(totalStockLong != null ? totalStockLong.intValue() : 0);
+
+                    // Mapear la fecha de eliminación (asumiendo que es el octavo campo, índice 7)
+                    if (result.length > 7) {
+                        dto.setDeletedAt((LocalDateTime) result[7]);
+                    }
+
                     return dto;
                 })
                 .collect(Collectors.toList());

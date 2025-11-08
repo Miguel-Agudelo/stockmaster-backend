@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Entity
 @Table(name = "PRODUCTO")
@@ -34,6 +36,11 @@ public class Product {
     @JoinColumn(name = "id_categoria", nullable = false)
     @JsonIgnoreProperties("hibernateLazyInitializer")
     private Category category;
+
+    private LocalDateTime createdAt;
+
+    @Column(name = "fecha_eliminacion")
+    private LocalDateTime deletedAt;
 
 
 }
