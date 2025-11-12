@@ -3,6 +3,8 @@ package com.stockmaster.backend.controller;
 import com.stockmaster.backend.dto.MovementDto;
 // 🚨 FALTA EL IMPORT DE LIST, necesario para el método GET
 import java.util.List;
+
+import com.stockmaster.backend.dto.TransferDto;
 import com.stockmaster.backend.entity.InventoryMovement;
 import com.stockmaster.backend.service.InventoryMovementService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -62,6 +64,25 @@ public class InventoryMovementController {
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Salida de stock registrada exitosamente.");
             response.put("movement", movement);
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    // HU20 - Transferencia de stock entre almacenes
+    @PostMapping("/transfer")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<?> transferStock(@RequestBody TransferDto transferDto) {
+        try {
+            Map<String, Object> result = movementService.transferStock(transferDto);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Transferencia de stock registrada exitosamente.");
+            response.put("transferReference", result.get("transferReference"));
+            response.put("exitMovement", result.get("exitMovement"));
+            response.put("entryMovement", result.get("entryMovement"));
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException | IllegalStateException e) {
             Map<String, String> errorResponse = new HashMap<>();

@@ -20,7 +20,6 @@ public class InventoryMovement {
     @Column(name = "fecha_movimiento", nullable = false)
     private LocalDateTime movementDate = LocalDateTime.now();
 
-    // Tipo de movimiento: "ENTRADA" o "SALIDA"
     @Column(name = "tipo_movimiento", nullable = false)
     private String movementType;
 
@@ -29,6 +28,9 @@ public class InventoryMovement {
 
     @Column(name = "motivo", length = 500)
     private String motive;
+
+    @Column(name = "referencia_transferencia", length = 50) // <-- NUEVO CAMPO
+    private String transferReference;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_producto", nullable = false)
