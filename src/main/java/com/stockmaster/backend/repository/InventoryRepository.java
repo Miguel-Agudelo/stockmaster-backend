@@ -18,4 +18,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     @Query("SELECT i FROM Inventory i WHERE i.currentStock < i.minStock")
     List<Inventory> findItemsWithLowStock();
+
+    @Query("SELECT SUM(i.currentStock) FROM Inventory i")
+    Long calculateTotalStock();
 }

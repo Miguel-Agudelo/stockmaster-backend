@@ -43,6 +43,7 @@ public class AuthController {
             Map<String, Object> userData = new HashMap<>();
             userData.put("id_user", jwtUtil.getClaims(token).get("id_user", Long.class));
             userData.put("role", jwtUtil.getClaims(token).get("role", String.class));
+            userData.put("name", user.getName());
             response.put("user", userData);
 
             return ResponseEntity.ok(response);

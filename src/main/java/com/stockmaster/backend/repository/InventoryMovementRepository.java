@@ -25,4 +25,7 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
             "GROUP BY p.id, p.name, p.price " +
             "ORDER BY SUM(m.quantity) DESC")
     List<Object[]> findMostSoldProductsWithRevenueAndAveragePrice();
+
+    long countByMovementDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+    List<InventoryMovement> findByOrderByMovementDateDesc(org.springframework.data.domain.Pageable pageable);
 }

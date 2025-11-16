@@ -27,4 +27,6 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
             "WHERE w.isActive = false " +
             "GROUP BY w.id, w.name, w.address, w.city, w.description, w.deletedAt") // <-- Añadido al GROUP BY
     List<Object[]> findAllInactiveWarehousesWithTotalStock();
+
+    long countByIsActiveTrue();
 }

@@ -34,4 +34,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "GROUP BY p.id, p.name, i.minStock " +
             "HAVING SUM(i.currentStock) < MIN(i.minStock)")
     List<Object[]> findProductsBelowMinStock();
+
+    long countByIsActiveTrue();
 }

@@ -51,6 +51,8 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // Permite acceso público al login
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/dashboard/**", "/api/reports/**")
+                        .hasAnyRole("ADMINISTRADOR", "OPERADOR")
                         .requestMatchers(HttpMethod.GET, "/api/movements").hasAnyRole("ADMINISTRADOR", "OPERADOR")
                         // 🟢 CORRECCIÓN CRÍTICA: Requiere autenticación para todas las demás rutas
                         .anyRequest().authenticated()
@@ -77,7 +79,6 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // 💡 Ajusta los orígenes según sea necesario (p.ej., el puerto de tu frontend)
         configuration.setAllowedOrigins(List.of("http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
