@@ -21,4 +21,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     @Query("SELECT SUM(i.currentStock) FROM Inventory i")
     Long calculateTotalStock();
+
+    List<Inventory> findByProductId(Long productId);
 }

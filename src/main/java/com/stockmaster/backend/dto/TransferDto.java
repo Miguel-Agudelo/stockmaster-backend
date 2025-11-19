@@ -8,5 +8,6 @@ public class TransferDto {
     private Long originWarehouseId;
     private Long destinationWarehouseId;
     private int quantity;
-    private Long userId; // Usuario que ejecuta la transferencia
+    private Long userId;
+    private String motive;
 }
