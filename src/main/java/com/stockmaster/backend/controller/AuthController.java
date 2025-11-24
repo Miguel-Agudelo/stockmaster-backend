@@ -5,6 +5,7 @@ import com.stockmaster.backend.entity.User;
 import com.stockmaster.backend.service.AuthService;
 import com.stockmaster.backend.service.UserService;
 import com.stockmaster.backend.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,22 +29,27 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    // Endpoint de Login
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginDto loginDto) {
         try {
-            String token = authService.authenticate(loginDto); // Obtiene el token
+            String token = authService.authenticate(loginDto);
 
             User user = userService.getUserByEmail(loginDto.getEmail());
             if (user == null) {
                 throw new BadCredentialsException("Usuario no encontrado o inactivo.");
             }
+
+            // Usar getClaims para obtener datos solo si el token es nuevo/válido
+            Claims claims = jwtUtil.getClaims(token);
+
             Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("message", "Login exitoso");
 
             Map<String, Object> userData = new HashMap<>();
-            userData.put("id_user", jwtUtil.getClaims(token).get("id_user", Long.class));
-            userData.put("role", jwtUtil.getClaims(token).get("role", String.class));
+            userData.put("id_user", claims.get("id_user", Long.class));
+            userData.put("role", claims.get("role", String.class));
             userData.put("name", user.getName());
             response.put("user", userData);
 
@@ -64,4 +71,5 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+
 }

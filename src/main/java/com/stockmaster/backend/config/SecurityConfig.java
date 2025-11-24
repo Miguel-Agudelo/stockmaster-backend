@@ -1,5 +1,7 @@
 package com.stockmaster.backend.config;
 
+import com.stockmaster.backend.security.SessionInactivityFilter;
+import com.stockmaster.backend.security.SessionRenewalFilter;
 import com.stockmaster.backend.util.JwtAuthenticationFilter;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -36,9 +38,16 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SessionInactivityFilter sessionInactivityFilter;
+    private final SessionRenewalFilter sessionRenewalFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          SessionInactivityFilter sessionInactivityFilter,
+                          SessionRenewalFilter sessionRenewalFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.sessionInactivityFilter = sessionInactivityFilter;
+        this.sessionRenewalFilter = sessionRenewalFilter;
     }
 
     @Bean
@@ -54,14 +63,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/dashboard/**", "/api/reports/**")
                         .hasAnyRole("ADMINISTRADOR", "OPERADOR")
                         .requestMatchers(HttpMethod.GET, "/api/movements").hasAnyRole("ADMINISTRADOR", "OPERADOR")
-                        // 🟢 CORRECCIÓN CRÍTICA: Requiere autenticación para todas las demás rutas
+                        // Requiere autenticación para todas las demás rutas
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                // Asegura que nuestro filtro JWT se ejecute antes del filtro de autenticación estándar
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // 1. Filtro de Inactividad (Debe ir primero para detectar la inactividad antes de procesar el JWT)
+                .addFilterBefore(sessionInactivityFilter, UsernamePasswordAuthenticationFilter.class)
+                // 2. Filtro de Autenticación JWT (Verifica si el token es válido y autentica al usuario)
+                .addFilterBefore(jwtAuthenticationFilter, SessionInactivityFilter.class)
+                // 3. Filtro de Renovación de Sesión (Se ejecuta después de la autenticación para refrescar el token)
+                .addFilterAfter(sessionRenewalFilter, JwtAuthenticationFilter.class);
+
 
         return http.build();
     }
@@ -76,12 +90,14 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    // Configuración CORS... (Se mantiene igual)
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*", "X-New-Token"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
