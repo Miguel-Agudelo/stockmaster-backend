@@ -18,7 +18,7 @@ public class JwtUtil {
     private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(SECRET_KEY_STRING.getBytes());
 
     // 120000 ms = 2 minutos (Tiempo de vida del token)
-    private final long validityInMilliseconds = 120000;
+    private final long validityInMilliseconds = 1800000;
 
     public String createToken(User user) {
         return Jwts.builder()

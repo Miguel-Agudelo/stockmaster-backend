@@ -26,7 +26,7 @@ public class SessionRenewalFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
 
     // Umbral de Renovación: 60 segundos (60,000 ms). Si quedan menos de 60s, renovar.
-    private static final long RENEWAL_THRESHOLD_MS = 60000L;
+    private static final long RENEWAL_THRESHOLD_MS = 300000L;
 
     public SessionRenewalFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
