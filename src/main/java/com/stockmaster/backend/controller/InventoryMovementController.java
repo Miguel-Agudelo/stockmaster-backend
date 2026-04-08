@@ -1,6 +1,7 @@
 package com.stockmaster.backend.controller;
 
 import com.stockmaster.backend.dto.MovementDto;
+import com.stockmaster.backend.dto.StockAdjustmentDto;
 import com.stockmaster.backend.dto.TransferDto;
 import com.stockmaster.backend.entity.InventoryMovement;
 import com.stockmaster.backend.service.InventoryMovementService;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,14 +24,14 @@ public class InventoryMovementController {
     @Autowired
     private InventoryMovementService movementService;
 
+    // ── Historial ────────────────────────────────────────────────────────────
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<List<MovementDto>> getMovementHistory() {
-        List<MovementDto> history = movementService.getAllMovements();
-        return ResponseEntity.ok(history);
+        return ResponseEntity.ok(movementService.getAllMovements());
     }
 
-    // HU08 - Registro de entradas
+    // ── HU08 — Registro de entradas ──────────────────────────────────────────
     @PostMapping("/entry")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<?> registerEntry(@RequestBody MovementDto movementDto) {
@@ -40,13 +42,11 @@ public class InventoryMovementController {
             response.put("movement", movement);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    // HU09 - Registro de salidas
+    // ── HU09 — Registro de salidas ───────────────────────────────────────────
     @PostMapping("/exit")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<?> registerExit(@RequestBody MovementDto movementDto) {
@@ -57,13 +57,26 @@ public class InventoryMovementController {
             response.put("movement", movement);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    // HU20 - Transferencia de stock entre almacenes
+    // ── HU11 — Ajuste de inventario ──────────────────────────────────────────
+    @PostMapping("/adjust")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<?> registerStockAdjustment(@RequestBody StockAdjustmentDto adjustmentDto) {
+        try {
+            InventoryMovement movement = movementService.registerStockAdjustment(adjustmentDto);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Ajuste de inventario registrado exitosamente.");
+            response.put("movement", movement);
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ── HU20 — Transferencia de stock entre almacenes ────────────────────────
     @PostMapping("/transfer")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<?> transferStock(@RequestBody TransferDto transferDto) {
@@ -76,9 +89,7 @@ public class InventoryMovementController {
             response.put("entryMovement", result.get("entryMovement"));
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }

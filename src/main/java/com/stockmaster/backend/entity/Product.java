@@ -3,8 +3,9 @@ package com.stockmaster.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
-
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Entity
@@ -37,10 +38,18 @@ public class Product {
     @JsonIgnoreProperties("hibernateLazyInitializer")
     private Category category;
 
+    // HU-PI2-01: relación N a M con Proveedor a través de PRODUCTO_PROVEEDOR
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "PRODUCTO_PROVEEDOR",
+            joinColumns = @JoinColumn(name = "id_producto"),
+            inverseJoinColumns = @JoinColumn(name = "id_proveedor")
+    )
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Set<Supplier> suppliers = new HashSet<>();
+
     private LocalDateTime createdAt;
 
     @Column(name = "fecha_eliminacion")
     private LocalDateTime deletedAt;
-
-
 }

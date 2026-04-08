@@ -11,10 +11,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByName(String name);
 
     // Consulta JPQL modificada para incluir el borrado lógico
-    @Query("SELECT p.id, p.name, p.description, p.price, p.sku, p.category.name, SUM(i.currentStock) " +
+    @Query("SELECT p.id, p.name, p.description, p.price, p.sku, p.category.name, SUM(i.currentStock), p.category.id " +
             "FROM Product p JOIN p.category c LEFT JOIN Inventory i ON p.id = i.product.id " +
             "WHERE p.isActive = true " +
-            "GROUP BY p.id, p.name, p.description, p.price, p.sku, c.name")
+            "GROUP BY p.id, p.name, p.description, p.price, p.sku, c.name, p.category.id")
     List<Object[]> findAllProductsWithTotalStock();
 
     @Query("SELECT p.id, p.name, p.description, p.price, p.sku, c.name, SUM(i.currentStock), p.deletedAt " + // <-- 8vo campo añadido

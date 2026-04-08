@@ -1,6 +1,7 @@
 package com.stockmaster.backend.service;
 
 import com.stockmaster.backend.dto.MovementDto;
+import com.stockmaster.backend.dto.StockAdjustmentDto;
 import com.stockmaster.backend.dto.TransferDto;
 import com.stockmaster.backend.dto.WarehouseStockDto;
 import com.stockmaster.backend.entity.*;
@@ -29,20 +30,14 @@ public class InventoryMovementService {
     private InventoryMovementRepository movementRepository;
 
     public List<MovementDto> getAllMovements() {
-        // 1. Obtener todas las entidades del repositorio
         List<InventoryMovement> movements = movementRepository.findAll();
-
-        // 2. Mapear cada entidad a un MovementDto
         return movements.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
     public List<WarehouseStockDto> getProductStockByWarehouses(Long productId) {
-        // 1. Obtener la lista de Inventarios para ese producto
         List<Inventory> inventories = inventoryRepository.findByProductId(productId);
-
-        // 2. Mapear cada entidad Inventory a un WarehouseStockDto
         return inventories.stream()
                 .filter(i -> i.getCurrentStock() > 0)
                 .map(inventory -> new WarehouseStockDto(
@@ -50,6 +45,20 @@ public class InventoryMovementService {
                         inventory.getCurrentStock()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * HU11 — Retorna el stock actual de un producto en un almacén específico.
+     * Usado por el frontend para mostrar "Stock actual" en tiempo real.
+     */
+    public int getCurrentStock(Long productId, Long warehouseId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado."));
+        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado."));
+        return inventoryRepository.findByProductAndWarehouse(product, warehouse)
+                .map(Inventory::getCurrentStock)
+                .orElse(0);
     }
 
     @Transactional
@@ -63,7 +72,6 @@ public class InventoryMovementService {
     }
 
     private InventoryMovement registerMovement(MovementDto dto, String type) {
-        // 1. Validar entidades
         Product product = productRepository.findById(dto.getProductId())
                 .filter(Product::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado o inactivo."));
@@ -76,7 +84,6 @@ public class InventoryMovementService {
             throw new IllegalArgumentException("La cantidad debe ser mayor a cero.");
         }
 
-        // 2. Obtener o crear el registro de Inventario (stock)
         Inventory inventory = inventoryRepository.findByProductAndWarehouse(product, warehouse)
                 .orElseGet(() -> {
                     if (type.equals("SALIDA")) {
@@ -90,7 +97,6 @@ public class InventoryMovementService {
                     return newInventory;
                 });
 
-        // 3. Aplicar lógica de actualización de stock
         int newStock;
         if (type.equals("ENTRADA")) {
             newStock = inventory.getCurrentStock() + dto.getQuantity();
@@ -100,11 +106,9 @@ public class InventoryMovementService {
             }
             newStock = inventory.getCurrentStock() - dto.getQuantity();
         }
-        // 4. Guardar el nuevo stock
         inventory.setCurrentStock(newStock);
         inventoryRepository.save(inventory);
 
-        // 5. Registrar el movimiento
         InventoryMovement movement = new InventoryMovement();
         movement.setProduct(product);
         movement.setWarehouse(warehouse);
@@ -118,7 +122,6 @@ public class InventoryMovementService {
 
     private MovementDto convertToDto(InventoryMovement movement) {
         MovementDto dto = new MovementDto();
-
         dto.setId(movement.getId());
         dto.setQuantity(movement.getQuantity());
         dto.setMovementType(movement.getMovementType());
@@ -126,19 +129,14 @@ public class InventoryMovementService {
         dto.setMotive(movement.getMotive());
         dto.setTransferReference(movement.getTransferReference());
 
-        // Producto
         if (movement.getProduct() != null) {
             dto.setProductId(movement.getProduct().getId());
             dto.setProductName(movement.getProduct().getName());
         }
-
-        // Almacén/Bodega
         if (movement.getWarehouse() != null) {
             dto.setWarehouseId(movement.getWarehouse().getId());
             dto.setWarehouseName(movement.getWarehouse().getName());
         }
-
-        // Usuario
         if (movement.getUser() != null) {
             dto.setUserId(movement.getUser().getId());
             dto.setUserName(movement.getUser().getName());
@@ -156,7 +154,6 @@ public class InventoryMovementService {
             throw new IllegalArgumentException("La cantidad a transferir debe ser mayor a cero.");
         }
 
-        // 1. Validar entidades
         Product product = productRepository.findById(dto.getProductId())
                 .filter(Product::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado o inactivo."));
@@ -168,22 +165,16 @@ public class InventoryMovementService {
                 .filter(User::isActive)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o inactivo."));
 
-        // 2. Generar Referencia Única de Transferencia
         String transferReference = "TRANS-" + System.currentTimeMillis();
 
-        // 3. OBTENER INVENTARIO Y VERIFICAR STOCK
         Inventory originInventory = getAndValidateInventory(product, origin, dto.getQuantity(), "SALIDA");
         Inventory destinationInventory = getAndValidateInventory(product, destination, 0, "ENTRADA");
 
-        // 4. EJECUTAR SALIDA (DEL ORIGEN) - Primer paso transaccional
         InventoryMovement exitMovement = executeMovement(product, origin, user, dto.getQuantity(),
                 "SALIDA", transferReference, dto.getMotive(), originInventory);
-
-        // 5. EJECUTAR ENTRADA (AL DESTINO) - Segundo paso transaccional
         InventoryMovement entryMovement = executeMovement(product, destination, user, dto.getQuantity(),
                 "ENTRADA", transferReference, dto.getMotive(), destinationInventory);
 
-        // 6. Retornar resultados
         Map<String, Object> result = new HashMap<>();
         result.put("transferReference", transferReference);
         result.put("exitMovement", exitMovement);
@@ -213,21 +204,17 @@ public class InventoryMovementService {
 
     private InventoryMovement executeMovement(Product product, Warehouse warehouse, User user, int quantity,
                                               String type, String transferRef, String motive, Inventory inventory) {
-
         if (inventory.getId() == null) {
             inventoryRepository.save(inventory);
         }
 
-        // 1. Cálculo del Nuevo Stock
         int newStock = type.equals("ENTRADA")
                 ? inventory.getCurrentStock() + quantity
                 : inventory.getCurrentStock() - quantity;
 
-        // 2. Actualización y Persistencia de Stock
         inventory.setCurrentStock(newStock);
         inventoryRepository.save(inventory);
 
-        // 3. Registro del Movimiento
         InventoryMovement movement = new InventoryMovement();
         movement.setProduct(product);
         movement.setWarehouse(warehouse);
@@ -235,6 +222,90 @@ public class InventoryMovementService {
         movement.setMovementType(type);
         movement.setUser(user);
         movement.setTransferReference(transferRef);
+        movement.setMotive(motive);
+
+        return movementRepository.save(movement);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HU11 — Ajuste de inventario
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Corrige discrepancias de stock de forma manual y justificada.
+     * Registra un movimiento tipo AJUSTE_POSITIVO o AJUSTE_NEGATIVO.
+     */
+    @Transactional
+    public InventoryMovement registerStockAdjustment(StockAdjustmentDto dto) {
+
+        // 1. Validaciones básicas
+        if (dto.getQuantity() <= 0) {
+            throw new IllegalArgumentException("La cantidad debe ser mayor a cero.");
+        }
+        if (dto.getReason() == null || dto.getReason().isBlank()) {
+            throw new IllegalArgumentException("La razón del ajuste es obligatoria.");
+        }
+        if (!"POSITIVO".equals(dto.getAdjustmentType()) && !"NEGATIVO".equals(dto.getAdjustmentType())) {
+            throw new IllegalArgumentException("El tipo de ajuste debe ser POSITIVO o NEGATIVO.");
+        }
+
+        // 2. Validar entidades
+        Product product = productRepository.findById(dto.getProductId())
+                .filter(Product::isActive)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado o inactivo."));
+        Warehouse warehouse = warehouseRepository.findById(dto.getWarehouseId())
+                .orElseThrow(() -> new IllegalArgumentException("Almacén no encontrado."));
+        User user = userRepository.findById(dto.getUserId())
+                .filter(User::isActive)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado o inactivo."));
+
+        // 3. Obtener o crear registro de inventario
+        Inventory inventory = inventoryRepository.findByProductAndWarehouse(product, warehouse)
+                .orElseGet(() -> {
+                    if ("NEGATIVO".equals(dto.getAdjustmentType())) {
+                        throw new IllegalStateException(
+                                "No existe inventario de este producto en el almacén seleccionado.");
+                    }
+                    Inventory newInventory = new Inventory();
+                    newInventory.setProduct(product);
+                    newInventory.setWarehouse(warehouse);
+                    newInventory.setCurrentStock(0);
+                    newInventory.setMinStock(12);
+                    return newInventory;
+                });
+
+        // 4. Calcular nuevo stock
+        int newStock;
+        String movementType;
+        if ("POSITIVO".equals(dto.getAdjustmentType())) {
+            newStock     = inventory.getCurrentStock() + dto.getQuantity();
+            movementType = "AJUSTE_POSITIVO";
+        } else {
+            if (inventory.getCurrentStock() < dto.getQuantity()) {
+                throw new IllegalStateException(
+                        "Stock insuficiente. Hay " + inventory.getCurrentStock()
+                                + " unidades y se intenta ajustar -" + dto.getQuantity() + ".");
+            }
+            newStock     = inventory.getCurrentStock() - dto.getQuantity();
+            movementType = "AJUSTE_NEGATIVO";
+        }
+
+        // 5. Persistir stock actualizado
+        inventory.setCurrentStock(newStock);
+        inventoryRepository.save(inventory);
+
+        // 6. Registrar el movimiento de ajuste
+        String motive = dto.getReason();
+        if (dto.getNotes() != null && !dto.getNotes().isBlank()) {
+            motive = motive + ": " + dto.getNotes().trim();
+        }
+
+        InventoryMovement movement = new InventoryMovement();
+        movement.setProduct(product);
+        movement.setWarehouse(warehouse);
+        movement.setQuantity(dto.getQuantity());
+        movement.setMovementType(movementType);
+        movement.setUser(user);
         movement.setMotive(motive);
 
         return movementRepository.save(movement);
