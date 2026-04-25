@@ -1,5 +1,6 @@
 package com.stockmaster.backend.service;
 
+import com.stockmaster.backend.dto.ChangePasswordDto;
 import com.stockmaster.backend.dto.UserDto;
 import com.stockmaster.backend.dto.UserListDto;
 import com.stockmaster.backend.entity.User;
@@ -158,5 +159,40 @@ public class UserService implements UserDetailsService {
 
         userToRestore.setActive(true);
         userRepository.save(userToRestore);
+    }
+
+    // HU - PI2 09
+    @Transactional
+    public void changePassword(String email, ChangePasswordDto dto) {
+        final int MIN_PASSWORD_LENGTH = 6;
+
+        // 1. Obtener el usuario
+        User user = getUserByEmail(email);
+
+        // 2. Verificar que la contraseña actual sea correcta
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("La contraseña actual es incorrecta.");
+        }
+
+        // 3. Verificar que nueva y confirmación coincidan
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new IllegalArgumentException("La nueva contraseña y su confirmación no coinciden.");
+        }
+
+        // 4. Validar longitud mínima
+        if (dto.getNewPassword() == null || dto.getNewPassword().length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException(
+                    "La nueva contraseña debe tener al menos " + MIN_PASSWORD_LENGTH + " caracteres.");
+        }
+
+        // 5. Verificar que la nueva contraseña sea diferente a la actual
+        if (passwordEncoder.matches(dto.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException(
+                    "La nueva contraseña debe ser diferente a la contraseña actual.");
+        }
+
+        // 6. Guardar la nueva contraseña encriptada
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
     }
 }
