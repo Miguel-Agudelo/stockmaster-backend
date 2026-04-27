@@ -1,3 +1,4 @@
+// Java
 package com.stockmaster.backend.service;
 
 import com.stockmaster.backend.dto.ProductDto;
@@ -8,14 +9,17 @@ import com.stockmaster.backend.entity.Inventory;
 import com.stockmaster.backend.entity.Product;
 import com.stockmaster.backend.entity.Supplier;
 import com.stockmaster.backend.entity.Warehouse;
+import com.stockmaster.backend.entity.User; // <-- IMPORT AGREGADO
 import com.stockmaster.backend.repository.CategoryRepository;
 import com.stockmaster.backend.repository.InventoryRepository;
 import com.stockmaster.backend.repository.ProductRepository;
 import com.stockmaster.backend.repository.SupplierRepository;
 import com.stockmaster.backend.repository.WarehouseRepository;
+import com.stockmaster.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -31,6 +35,8 @@ public class ProductService {
     @Autowired private WarehouseRepository warehouseRepository;
     @Autowired private InventoryRepository inventoryRepository;
     @Autowired private SupplierRepository supplierRepository;
+    @Autowired private ProductChangeLogService changeLogService;
+    @Autowired private UserRepository userRepository;
 
     @Transactional
     public Product createProduct(ProductDto productDto) {
@@ -73,7 +79,8 @@ public class ProductService {
         List<Object[]> results = productRepository.findAllProductsWithTotalStock();
         return results.stream().map(result -> {
             ProductListDto dto = new ProductListDto();
-            dto.setId((Long) result[0]);
+            Long productId = ((Number) result[0]).longValue();
+            dto.setId(productId);
             dto.setName((String) result[1]);
             dto.setDescription((String) result[2]);
             dto.setPrice((Double) result[3]);
@@ -85,27 +92,77 @@ public class ProductService {
                 dto.setCategoryId((Long) result[7]);
             }
             // HU-PI2-01: cargar proveedores del producto
-            dto.setSuppliers(loadSuppliers((Long) result[0]));
+            dto.setSuppliers(loadSuppliers(productId));
+            if (result.length > 7 && result[7] != null) {
+                dto.setCategoryId(((Number) result[7]).longValue());
+            }
             return dto;
         }).collect(Collectors.toList());
     }
 
     @Transactional
-    public Product updateProduct(Long id, ProductDto productDto) {
+    public Product updateProduct(Long id, ProductDto productDto, String editorEmail) {
         Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado con ID: " + id));
 
-        existingProduct.setName(productDto.getName());
-        existingProduct.setDescription(productDto.getDescription());
-        existingProduct.setPrice(productDto.getPrice());
-        existingProduct.setCategory(resolveCategory(productDto));
+        // Obtener el usuario que realiza el cambio
+        User editor = userRepository.findByEmailAndIsActive(editorEmail, true)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario editor no encontrado."));
 
-        // HU-PI2-01: actualizar proveedores si se enviaron (null = no tocar, lista vacía = quitar todos)
+        // ── Detectar y registrar cambios campo por campo ──────────────────
+        if (!strEquals(existingProduct.getName(), productDto.getName())) {
+            changeLogService.recordChange(existingProduct, editor,
+                    "Nombre", existingProduct.getName(), productDto.getName());
+            existingProduct.setName(productDto.getName());
+        }
+
+        if (!strEquals(existingProduct.getDescription(), productDto.getDescription())) {
+            changeLogService.recordChange(existingProduct, editor,
+                    "Descripción", existingProduct.getDescription(), productDto.getDescription());
+            existingProduct.setDescription(productDto.getDescription());
+        }
+
+        String oldPrice = String.valueOf(existingProduct.getPrice());
+        String newPrice = String.valueOf(productDto.getPrice());
+        if (!strEquals(oldPrice, newPrice)) {
+            changeLogService.recordChange(existingProduct, editor,
+                    "Precio", oldPrice, newPrice);
+            existingProduct.setPrice(productDto.getPrice());
+        }
+
+        // Categoría
+        Category newCategory = resolveCategory(productDto);
+        String oldCatName = existingProduct.getCategory() != null ? existingProduct.getCategory().getName() : null;
+        String newCatName = newCategory.getName();
+        if (!strEquals(oldCatName, newCatName)) {
+            changeLogService.recordChange(existingProduct, editor,
+                    "Categoría", oldCatName, newCatName);
+            existingProduct.setCategory(newCategory);
+        }
+
+        // Proveedores (registrar como un cambio global si hay diferencia)
         if (productDto.getSupplierIds() != null) {
-            existingProduct.setSuppliers(resolveSuppliers(productDto.getSupplierIds()));
+            String oldSuppliers = existingProduct.getSuppliers().stream()
+                    .map(s -> s.getName()).sorted().collect(Collectors.joining(", "));
+            Set<Supplier> newSupplierSet = resolveSuppliers(productDto.getSupplierIds());
+            String newSuppliers = newSupplierSet.stream()
+                    .map(s -> s.getName()).sorted().collect(Collectors.joining(", "));
+            if (!strEquals(oldSuppliers, newSuppliers)) {
+                changeLogService.recordChange(existingProduct, editor,
+                        "Proveedores", oldSuppliers.isEmpty() ? "Sin proveedor" : oldSuppliers,
+                        newSuppliers.isEmpty() ? "Sin proveedor" : newSuppliers);
+                existingProduct.setSuppliers(newSupplierSet);
+            }
         }
 
         return productRepository.save(existingProduct);
+    }
+
+    /** Comparación null-safe de strings */
+    private boolean strEquals(String a, String b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.equals(b);
     }
 
     @Transactional
@@ -133,7 +190,8 @@ public class ProductService {
         List<Object[]> results = productRepository.findAllInactiveProductsWithTotalStock();
         return results.stream().map(result -> {
             ProductListDto dto = new ProductListDto();
-            dto.setId((Long) result[0]);
+            Long productId = ((Number) result[0]).longValue();
+            dto.setId(productId);
             dto.setName((String) result[1]);
             dto.setDescription((String) result[2]);
             dto.setPrice((Double) result[3]);

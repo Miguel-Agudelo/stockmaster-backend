@@ -14,7 +14,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p.id, p.name, p.description, p.price, p.sku, p.category.name, SUM(i.currentStock), p.category.id " +
             "FROM Product p JOIN p.category c LEFT JOIN Inventory i ON p.id = i.product.id " +
             "WHERE p.isActive = true " +
-            "GROUP BY p.id, p.name, p.description, p.price, p.sku, c.name, p.category.id")
+            "GROUP BY p.id, p.name, p.description, p.price, p.sku, c.name, p.category.id " +
+            "ORDER BY p.id DESC")   // ← añade esto
     List<Object[]> findAllProductsWithTotalStock();
 
     @Query("SELECT p.id, p.name, p.description, p.price, p.sku, c.name, SUM(i.currentStock), p.deletedAt " + // <-- 8vo campo añadido

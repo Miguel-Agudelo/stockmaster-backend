@@ -45,16 +45,22 @@ public class ProductController {
     //endpoint para la HU06
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
-    public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody ProductDto productDto) {
-        System.out.println("Antes de @PreAuthorize - ID: " + id + ", Autoridades: " + SecurityContextHolder.getContext().getAuthentication().getAuthorities());
+    public ResponseEntity<?> updateProduct(@PathVariable Long id,
+                                           @RequestBody ProductDto productDto) {
         try {
-            Product updatedProduct = productService.updateProduct(id, productDto);
+            // Obtener el email del usuario autenticado desde el contexto de seguridad
+            String editorEmail = SecurityContextHolder.getContext()
+                    .getAuthentication().getName();
+
+            Product updatedProduct = productService.updateProduct(id, productDto, editorEmail);
+
             ProductListDto responseDto = new ProductListDto();
             responseDto.setId(updatedProduct.getId());
             responseDto.setName(updatedProduct.getName());
             responseDto.setDescription(updatedProduct.getDescription());
             responseDto.setPrice(updatedProduct.getPrice());
-            responseDto.setCategoryName(updatedProduct.getCategory() != null ? updatedProduct.getCategory().getName() : null);
+            responseDto.setCategoryName(updatedProduct.getCategory() != null
+                    ? updatedProduct.getCategory().getName() : null);
             return ResponseEntity.ok(responseDto);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
