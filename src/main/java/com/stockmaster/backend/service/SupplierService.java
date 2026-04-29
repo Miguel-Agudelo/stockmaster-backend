@@ -100,6 +100,13 @@ public class SupplierService {
         if (!supplier.isActive()) {
             throw new IllegalStateException("El proveedor ya se encuentra inactivo.");
         }
+        long productCount = supplierRepository.countActiveProductsBySupplierId(id);
+        if (productCount > 0) {
+            throw new IllegalStateException(
+                    "No es posible eliminar el proveedor porque tiene " + productCount +
+                            " producto(s) activo(s) asociado(s). Reasigna o elimina los productos antes de continuar."
+            );
+        }
         supplier.setActive(false);
         supplier.setDeletedAt(LocalDateTime.now());
         supplierRepository.save(supplier);
