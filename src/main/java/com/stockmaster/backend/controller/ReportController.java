@@ -3,6 +3,7 @@ package com.stockmaster.backend.controller;
 import com.stockmaster.backend.dto.MovementReportDto;
 import com.stockmaster.backend.dto.SalesReportDto;
 import com.stockmaster.backend.dto.StockReportDto;
+import com.stockmaster.backend.dto.SupplierTraceabilityDto;
 import com.stockmaster.backend.service.ReportService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,5 +48,24 @@ public class ReportController {
     @GetMapping("/sales")
     public ResponseEntity<List<SalesReportDto>> getMostSoldProductsReport() {
         return ResponseEntity.ok(reportService.getMostSoldProductsReport());
+    }
+
+    // HU-PI2-09 - Reporte de Trazabilidad por Proveedor
+    @GetMapping("/supplier-traceability")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<List<SupplierTraceabilityDto>> getSupplierTraceabilityReport(
+            @RequestParam Long supplierId) {
+        return ResponseEntity.ok(reportService.getSupplierTraceabilityReport(supplierId));
+    }
+
+    // HU-PI2-09 - Exportar Excel de Trazabilidad por Proveedor
+    @GetMapping("/supplier-traceability/export/excel")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<byte[]> exportSupplierTraceabilityExcel(@RequestParam Long supplierId) {
+        byte[] excelBytes = reportService.exportSupplierTraceabilityToExcel(supplierId);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=trazabilidad_proveedor.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(excelBytes);
     }
 }
