@@ -107,6 +107,7 @@ public class DashboardService {
         List<Inventory> lowStockItems = inventoryRepository.findItemsWithLowStock();
         return lowStockItems.stream()
                 .map(item -> new LowStockProductDto(
+                        item.getId(),
                         item.getProduct().getId(),
                         item.getProduct().getName(),
                         item.getWarehouse().getName(),

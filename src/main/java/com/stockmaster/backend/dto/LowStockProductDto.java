@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 @Data
 @AllArgsConstructor
 public class LowStockProductDto {
+    private Long inventoryId;
     private Long id;
     private String name;
     private String warehouseName;
