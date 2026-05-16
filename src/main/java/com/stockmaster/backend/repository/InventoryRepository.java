@@ -16,7 +16,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     List<Inventory> findByWarehouseAndCurrentStockGreaterThan(Warehouse warehouse, int currentStock);
     long countByWarehouseAndCurrentStockGreaterThan(Warehouse warehouse, int currentStock);
 
-    @Query("SELECT i FROM Inventory i WHERE i.currentStock < i.minStock")
+    @Query("SELECT i FROM Inventory i WHERE i.currentStock <= i.minStock")
     List<Inventory> findItemsWithLowStock();
 
     @Query("SELECT SUM(i.currentStock) FROM Inventory i")
