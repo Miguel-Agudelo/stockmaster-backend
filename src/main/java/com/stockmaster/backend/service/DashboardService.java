@@ -1,8 +1,6 @@
 package com.stockmaster.backend.service;
 
-import com.stockmaster.backend.dto.DashboardMetricDto;
-import com.stockmaster.backend.dto.LowStockProductDto;
-import com.stockmaster.backend.dto.RecentMovementDto;
+import com.stockmaster.backend.dto.*;
 import com.stockmaster.backend.entity.Inventory;
 import com.stockmaster.backend.entity.InventoryMovement;
 import com.stockmaster.backend.repository.InventoryMovementRepository;
@@ -17,6 +15,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.stockmaster.backend.dto.WarehouseStockChartDto;
+import com.stockmaster.backend.dto.CategoryStockChartDto;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -84,6 +84,9 @@ public class DashboardService {
 
         summary.setTotalUsers(userRepository.count());
         summary.setTotalMovements(inventoryMovementRepository.count());
+        summary.setWarehouseStockChart(getWarehouseStockChart());
+        summary.setCategoryStockChart(getCategoryStockChart());
+        summary.setTotalInventoryValue(calculateTotalInventoryValue());
         return summary;
     }
 
@@ -134,5 +137,40 @@ public class DashboardService {
                         m.getUser() != null ? m.getUser().getName() : "Sistema"
                 ))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * HU-PI2-03: Stock agrupado por bodega activa para el gráfico de barras.
+     */
+    private List<WarehouseStockChartDto> getWarehouseStockChart() {
+        try {
+            return inventoryRepository.findStockByActiveWarehouse();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * HU-PI2-03: Conteo de productos activos por categoría para el gráfico circular.
+     */
+    private List<CategoryStockChartDto> getCategoryStockChart() {
+        try {
+            return inventoryRepository.findProductCountByCategory();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * HU-PI2-03: Valor total del inventario = SUM(precio * stock_actual) para cada
+     * combinación producto-bodega activa.
+     */
+    private double calculateTotalInventoryValue() {
+        try {
+            Double value = inventoryRepository.calculateTotalInventoryValue();
+            return value != null ? value : 0.0;
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 }

@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,10 +21,12 @@ public class SupplierController {
     @Autowired
     private SupplierService supplierService;
 
+    // Devuelve TODOS los proveedores (activos e inactivos) para que el frontend
+    // pueda calcular correctamente los contadores del dashboard — fix HU-PI2-01
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
-    public ResponseEntity<List<SupplierListDto>> getAllActiveSuppliers() {
-        return ResponseEntity.ok(supplierService.getAllActiveSuppliers());
+    public ResponseEntity<List<SupplierListDto>> getAllSuppliers() {
+        return ResponseEntity.ok(supplierService.getAllSuppliers());
     }
 
     // Papelera: listar inactivos

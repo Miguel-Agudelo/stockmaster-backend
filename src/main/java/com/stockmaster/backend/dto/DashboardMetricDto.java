@@ -3,6 +3,7 @@ package com.stockmaster.backend.dto;
 import lombok.Data;
 import java.util.List;
 
+
 @Data
 public class DashboardMetricDto {
     private long totalProducts;
@@ -15,4 +16,7 @@ public class DashboardMetricDto {
     private List<LowStockProductDto> lowStockProducts;
     private List<RecentMovementDto> recentMovements;
     private String userName;
+    private List<WarehouseStockChartDto> warehouseStockChart;
+    private List<CategoryStockChartDto> categoryStockChart;
+    private double totalInventoryValue;
 }
