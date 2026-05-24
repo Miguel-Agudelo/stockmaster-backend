@@ -34,6 +34,9 @@ public class User {
     @Column(name = "fecha_eliminacion")
     private LocalDateTime deletedAt;
 
+    @Column(name = "google_id", unique = true)
+    private String googleId;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
