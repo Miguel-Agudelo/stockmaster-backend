@@ -1,5 +1,6 @@
 package com.stockmaster.backend.repository;
 
+import com.stockmaster.backend.dto.TopProductStockDto;
 import com.stockmaster.backend.entity.Inventory;
 import com.stockmaster.backend.entity.Product;
 import com.stockmaster.backend.entity.Warehouse;
@@ -49,4 +50,13 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     // HU-PI2-03: Valor total del inventario (precio * stock_actual)
     @Query("SELECT SUM(i.currentStock * i.product.price) FROM Inventory i WHERE i.product.isActive = true")
     Double calculateTotalInventoryValue();
+
+    // Dashboard: top 7 productos con mayor stock disponible
+    @Query("SELECT new com.stockmaster.backend.dto.TopProductStockDto(" +
+            "    i.product.name, SUM(i.currentStock)) " +
+            "FROM Inventory i " +
+            "WHERE i.product.isActive = true " +
+            "GROUP BY i.product.id, i.product.name " +
+            "ORDER BY SUM(i.currentStock) DESC")
+    List<TopProductStockDto> findTopProductosByStock(org.springframework.data.domain.Pageable pageable);
 }
