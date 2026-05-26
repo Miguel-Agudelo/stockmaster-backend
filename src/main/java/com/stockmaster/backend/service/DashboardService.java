@@ -7,21 +7,18 @@ import com.stockmaster.backend.repository.InventoryMovementRepository;
 import com.stockmaster.backend.repository.InventoryRepository;
 import com.stockmaster.backend.repository.ProductRepository;
 import com.stockmaster.backend.repository.WarehouseRepository;
+import com.stockmaster.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import com.stockmaster.backend.dto.WarehouseStockChartDto;
-import com.stockmaster.backend.dto.CategoryStockChartDto;
-
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-
-import com.stockmaster.backend.repository.UserRepository;
 
 @Service
 public class DashboardService {
@@ -33,9 +30,12 @@ public class DashboardService {
 
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
-    public DashboardService(ProductRepository productRepository, WarehouseRepository warehouseRepository,
-                            InventoryMovementRepository inventoryMovementRepository, InventoryRepository inventoryRepository,
+    public DashboardService(ProductRepository productRepository,
+                            WarehouseRepository warehouseRepository,
+                            InventoryMovementRepository inventoryMovementRepository,
+                            InventoryRepository inventoryRepository,
                             UserRepository userRepository) {
         this.productRepository = productRepository;
         this.warehouseRepository = warehouseRepository;
@@ -43,72 +43,49 @@ public class DashboardService {
         this.inventoryRepository = inventoryRepository;
     }
 
-    /**
-     * Reúne todos los datos de resumen necesarios para la vista del Dashboard.
-     * @param userName Nombre del usuario logueado.
-     * @return DashboardMetricDto con todas las métricas.
-     */
     @Transactional(readOnly = true)
     public DashboardMetricDto getDashboardSummary(String userName) {
         DashboardMetricDto summary = new DashboardMetricDto();
 
         summary.setUserName(userName);
+        summary.setTotalProducts(productRepository.countByIsActiveTrue());
+        summary.setTotalWarehouses(warehouseRepository.countByIsActiveTrue());
+        summary.setTotalStock(calculateTotalStock());
 
-        // Contar productos activos (Usamos el metodo count de JpaRepository)
-        long totalProducts = productRepository.countByIsActiveTrue();
-        summary.setTotalProducts(totalProducts);
-
-        // Contar almacenes activos (Usamos el metodo count de JpaRepository)
-        long totalWarehouses = warehouseRepository.countByIsActiveTrue();
-        summary.setTotalWarehouses(totalWarehouses);
-
-        // Implementar cálculo del stock total del inventario (Nueva consulta necesaria)
-        summary.setTotalStock(calculateTotalStock()); // Llamada a un nuevo metodo privado
-
-        // Contar movimientos hoy
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
-        long movementsToday = inventoryMovementRepository.countByMovementDateBetween(startOfDay, endOfDay);
-        summary.setMovementsToday(movementsToday);
+        LocalDateTime endOfDay   = LocalDate.now().atTime(LocalTime.MAX);
+        summary.setMovementsToday(inventoryMovementRepository.countByMovementDateBetween(startOfDay, endOfDay));
 
-
-        // Alertas de Stock Bajo (InventoryRepository) ---
         List<LowStockProductDto> lowStockProducts = getLowStockAlerts();
         summary.setLowStockProducts(lowStockProducts);
         summary.setLowStockCount(lowStockProducts.size());
 
-
-        // Movimientos Recientes (InventoryMovementRepository) ---
-        List<RecentMovementDto> recentMovements = getRecentMovements(5); // Obtener los últimos 5
-        summary.setRecentMovements(recentMovements);
-
+        summary.setRecentMovements(getRecentMovements(5));
         summary.setTotalUsers(userRepository.count());
         summary.setTotalMovements(inventoryMovementRepository.count());
+
+        // HU-PI2-03
         summary.setWarehouseStockChart(getWarehouseStockChart());
         summary.setCategoryStockChart(getCategoryStockChart());
         summary.setTotalInventoryValue(calculateTotalInventoryValue());
+
+        // Dashboard mejorado
+        summary.setTotalRevenue(calculateTotalRevenue());
+        summary.setMovimientosMensuales(getMovimientosMensuales());
+        summary.setTopProductosByStock(getTopProductosByStock());
+
         return summary;
     }
 
-    /**
-     * Calcula el stock total sumando el currentStock de todas las entradas de Inventory.
-     */
     private long calculateTotalStock() {
         try {
-            Long totalStock = inventoryRepository.calculateTotalStock();
-            return totalStock != null ? totalStock : 0;
-        } catch (Exception e) {
-            return 0;
-        }
+            Long v = inventoryRepository.calculateTotalStock();
+            return v != null ? v : 0;
+        } catch (Exception e) { return 0; }
     }
 
-
-    /**
-     * Obtiene los productos cuyo stock actual es menor a su stock mínimo.
-     */
     private List<LowStockProductDto> getLowStockAlerts() {
-        List<Inventory> lowStockItems = inventoryRepository.findItemsWithLowStock();
-        return lowStockItems.stream()
+        return inventoryRepository.findItemsWithLowStock().stream()
                 .map(item -> new LowStockProductDto(
                         item.getId(),
                         item.getProduct().getId(),
@@ -120,14 +97,9 @@ public class DashboardService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene los N movimientos más recientes y los mapea a DTO.
-     */
     private List<RecentMovementDto> getRecentMovements(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
-        List<InventoryMovement> movements = inventoryMovementRepository.findByOrderByMovementDateDesc(pageable);
-
-        return movements.stream()
+        return inventoryMovementRepository.findByOrderByMovementDateDesc(pageable).stream()
                 .map(m -> new RecentMovementDto(
                         m.getId(),
                         m.getProduct().getName(),
@@ -139,38 +111,48 @@ public class DashboardService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * HU-PI2-03: Stock agrupado por bodega activa para el gráfico de barras.
-     */
     private List<WarehouseStockChartDto> getWarehouseStockChart() {
-        try {
-            return inventoryRepository.findStockByActiveWarehouse();
-        } catch (Exception e) {
-            return List.of();
-        }
+        try { return inventoryRepository.findStockByActiveWarehouse(); }
+        catch (Exception e) { return List.of(); }
     }
 
-    /**
-     * HU-PI2-03: Conteo de productos activos por categoría para el gráfico circular.
-     */
     private List<CategoryStockChartDto> getCategoryStockChart() {
-        try {
-            return inventoryRepository.findProductCountByCategory();
-        } catch (Exception e) {
-            return List.of();
-        }
+        try { return inventoryRepository.findProductCountByCategory(); }
+        catch (Exception e) { return List.of(); }
     }
 
-    /**
-     * HU-PI2-03: Valor total del inventario = SUM(precio * stock_actual) para cada
-     * combinación producto-bodega activa.
-     */
     private double calculateTotalInventoryValue() {
         try {
-            Double value = inventoryRepository.calculateTotalInventoryValue();
-            return value != null ? value : 0.0;
-        } catch (Exception e) {
-            return 0.0;
-        }
+            Double v = inventoryRepository.calculateTotalInventoryValue();
+            return v != null ? v : 0.0;
+        } catch (Exception e) { return 0.0; }
+    }
+
+    private double calculateTotalRevenue() {
+        try {
+            Double v = inventoryMovementRepository.calculateTotalRevenue();
+            return v != null ? v : 0.0;
+        } catch (Exception e) { return 0.0; }
+    }
+
+    private List<MonthlyMovementsDto> getMovimientosMensuales() {
+        try {
+            return inventoryMovementRepository.findMovimientosMensualesAnioActual()
+                    .stream()
+                    .map(row -> new MonthlyMovementsDto(
+                            ((Number) row[0]).intValue(),
+                            ((Number) row[1]).intValue(),
+                            ((Number) row[2]).longValue(),
+                            ((Number) row[3]).longValue()
+                    ))
+                    .collect(Collectors.toList());
+        } catch (Exception e) { return List.of(); }
+    }
+
+    private List<TopProductStockDto> getTopProductosByStock() {
+        try {
+            Pageable top7 = PageRequest.of(0, 7);
+            return inventoryRepository.findTopProductosByStock(top7);
+        } catch (Exception e) { return List.of(); }
     }
 }
