@@ -69,7 +69,7 @@ public class GoogleAuthService {
         User user = userRepository.findByGoogleIdAndIsActive(googleUser.getGoogleId(), true)
                 .orElseThrow(() -> new BadCredentialsException(
                         "No existe una cuenta activa vinculada a esta cuenta de Google. " +
-                        "Por favor, inicia sesión con tu correo y contraseña y vincula tu cuenta de Google desde tu perfil."));
+                                "Por favor, inicia sesión con tu correo y contraseña y vincula tu cuenta de Google desde tu perfil."));
 
         return jwtUtil.createToken(user);
     }
@@ -80,8 +80,8 @@ public class GoogleAuthService {
         if (!userEmail.equalsIgnoreCase(googleUser.getEmail())) {
             throw new IllegalArgumentException(
                     "El correo de la cuenta de Google (" + googleUser.getEmail() +
-                    ") no coincide con el correo registrado en el sistema (" + userEmail + "). " +
-                    "Debes usar la cuenta de Google asociada a tu correo del sistema.");
+                            ") no coincide con el correo registrado en el sistema (" + userEmail + "). " +
+                            "Debes usar la cuenta de Google asociada a tu correo del sistema.");
         }
 
         userRepository.findByGoogleId(googleUser.getGoogleId()).ifPresent(existingUser -> {
